@@ -131,8 +131,8 @@ class DnsResolver
             throw new \InvalidArgumentException('IP must be a valid IPv4 address');
         }
 
-        $quads = explode('.', $ip);
-        $reverse_ip = sprintf('%s.%s.%s.%s', $quads[3], $quads[2], $quads[1], $quads[0]);
+        $quads = array_map('intval', explode('.', $ip));
+        $reverse_ip = implode('.', array_reverse($quads));
 
         $cacheKey = "rbl:$reverse_ip";
         if ($this->cache->has($cacheKey)) {
