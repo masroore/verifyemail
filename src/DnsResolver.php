@@ -2,6 +2,7 @@
 
 namespace VerifyEmail;
 
+use Pdp\Domain;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 
@@ -33,19 +34,26 @@ class DnsResolver
      */
     public static function canonizeDomainName(string $domain): string
     {
-        return strtolower(trim($domain));
+        $domain = rtrim($domain, '.') . '.';
+        return strtolower($domain);
     }
 
     /**
      * Get MX hosts for the given email address
      *
-     * @param string $email
+     * @param string|EmailAddress $email
      * @return array
      * @throws InvalidArgumentException
      */
-    public function getMxHostsForEmail(string $email): array
+    public function getMxHostsForEmail($email): array
     {
-        $domain = Utils::extractDomainFromEmail($email);
+        if (is_string($email)) {
+            $d = new Domain(Utils::extractDomainFromEmail($email));
+            $domain = $d->toAscii()->getContent();
+        } elseif ($email instanceof EmailAddress) {
+            $domain = $email->canonizedDomain();
+        }
+
         return $this->getMxHostsForDomain($domain);
     }
 
@@ -58,13 +66,18 @@ class DnsResolver
      */
     public function getMxHostsForDomain(string $domain): array
     {
+        if (!is_string($domain) || empty($domain)) {
+            throw new \InvalidArgumentException('Domain must be a valid host address');
+        }
+
         if (!self::dnsSupported()) {
             return [];
         }
 
         $domain = self::canonizeDomainName($domain);
-        if ($this->cache->has($domain)) {
-            return $this->cache->get($domain);
+        $cacheKey = "domain:$domain";
+        if ($this->cache->has($cacheKey)) {
+            return $this->cache->get($cacheKey);
         }
 
         if (checkdnsrr($domain, 'MX') === false) {
@@ -82,7 +95,7 @@ class DnsResolver
         asort($mx_records);
 
         $sorted_hosts = array_keys($mx_records);
-        $this->cache->set($domain, $sorted_hosts);
+        $this->cache->set($cacheKey, $sorted_hosts);
 
         return $sorted_hosts;
     }
