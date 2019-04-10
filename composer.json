@@ -1,6 +1,7 @@
 {
   "name": "masroore/verifyemail",
   "description": "Provides means for verification of e-mail addresses.",
+  "type": "library",
   "homepage": "https://github.com/masroore/verifyemail",
   "keywords": [
     "php",
@@ -13,9 +14,11 @@
   ],
   "license": "BSD-2-Clause",
   "require": {
-    "php": ">=7.0",
+    "php": "^7.1.3",
     "psr/log": "^1.1",
-    "symfony/polyfill-intl-idn": "^1.11"
+    "symfony/polyfill-intl-idn": "^1.11",
+    "symfony/cache": "^4.2",
+    "symfony/polyfill-mbstring": "^1.11"
   },
   "authors": [
     {
@@ -24,6 +27,10 @@
     }
   ],
   "minimum-stability": "stable",
+  "suggest": {
+    "ext-mbstring": "For best performance",
+    "ext-intl": "For best performance"
+  },
   "autoload": {
     "psr-4": {
       "VerifyEmail\\": "src/"
