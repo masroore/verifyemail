@@ -55,3 +55,5 @@ if (EmailAddressVerifier::validate($email, $level)) {
     echo 'Email verified';
 }
 ```
+
+PHP email checker, email tester, email verifier, email validation, check email address, verify email address, free email verifier, test email address, valid email address
