@@ -5,18 +5,22 @@
   "keywords": [
     "php",
     "email",
-    "verification",
+    "email verification",
+    "email validation",
+    "email check",
     "smtp",
     "mx"
   ],
-  "license": "BSD",
+  "license": "BSD-2-Clause",
   "require": {
     "php": ">=7.0",
-    "psr/log": "^1.1"
+    "psr/log": "^1.1",
+    "symfony/polyfill-intl-idn": "^1.11"
   },
   "authors": [
     {
-      "name": "Masroor Ehsan"
+      "name": "Masroor Ehsan",
+      "role": "Developer"
     }
   ],
   "minimum-stability": "stable",
