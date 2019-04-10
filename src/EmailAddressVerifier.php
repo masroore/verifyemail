@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 
 namespace VerifyEmail;
 
@@ -146,7 +145,7 @@ final class EmailAddressVerifier
      */
     public function setHelloDomain($helloDomain)
     {
-        if (!empty($helloDomain)) {
+        if (is_string($helloDomain) && !empty($helloDomain)) {
             $this->helloDomain = $helloDomain;
         }
     }
@@ -168,7 +167,7 @@ final class EmailAddressVerifier
      */
     public function setMailFrom($mailFrom)
     {
-        if (!empty($mailFrom)) {
+        if (is_string($mailFrom) && !empty($mailFrom)) {
             $this->mailFrom = $mailFrom;
         }
     }
@@ -200,8 +199,8 @@ final class EmailAddressVerifier
     {
         $this->currentLevel = AddressValidationLevel::SyntaxCheck;
 
-        if (empty($email)) {
-            throw new InvalidArgumentException('email cannot be empty');
+        if (!is_string($email) || empty($email)) {
+            throw new InvalidArgumentException('Email must be a valid email address');
         }
 
         if (Utils::checkEmail($email, false)) {

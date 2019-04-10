@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 
 namespace VerifyEmail;
 
@@ -7,6 +6,12 @@ use Psr\Log\LoggerInterface;
 
 class SmtpConnection
 {
+    use ProtocolTrait;
+    /**
+     * Default timeout in seconds for initiating session
+     */
+    const TIMEOUT_CONNECTION = 30;
+
     /**
      * SMTP line break constant.
      *
@@ -99,15 +104,12 @@ class SmtpConnection
     public $transferLogs = [];
 
     /**
-     * The timeout value for connection, in seconds.
-     * Default of 5 minutes (300sec) is from RFC2821 section 4.5.3.2.
+     * The timeout value for connection, in seconds. (default: 30 seconds)
      * This needs to be quite high to function correctly with hosts using greetdelay as an anti-spam measure.
-     *
-     * @see http://tools.ietf.org/html/rfc2821#section-4.5.3.2
      *
      * @var int
      */
-    private $timeout = 300;
+    private $timeout = self::TIMEOUT_CONNECTION;
 
     /**
      * How long to wait for commands to complete, in seconds.

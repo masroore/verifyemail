@@ -3,6 +3,10 @@
   "description": "Provides means for verification of e-mail addresses.",
   "type": "library",
   "homepage": "https://github.com/masroore/verifyemail",
+  "support": {
+    "issues": "https://github.com/masroore/verifyemail/issues",
+    "source": "https://github.com/masroore/verifyemail"
+  },
   "keywords": [
     "php",
     "email",
@@ -18,11 +22,15 @@
     "psr/log": "^1.1",
     "symfony/polyfill-intl-idn": "^1.11",
     "symfony/cache": "^4.2",
-    "symfony/polyfill-mbstring": "^1.11"
+    "symfony/polyfill-mbstring": "^1.11",
+    "zendframework/zend-validator": "^2.12",
+    "psr/simple-cache": "^1.0",
+    "jeremykendall/php-domain-parser": "^5.4"
   },
   "authors": [
     {
       "name": "Masroor Ehsan",
+      "homepage": "https://github.com/masroore",
       "role": "Developer"
     }
   ],
