@@ -57,12 +57,12 @@ class Utils
      *
      * @return boolean True if email address is valid
      */
-    public static function checkEmail($email, $checkDns)
+    public static function checkEmail(string $email, bool $checkDns): bool
     {
         $email = trim($email);
 
         // check for length limit specified by RFC 5321
-        if (empty($email) || strlen($email) > 254) {
+        if (empty($email) || strlen($email) <= 3 || strlen($email) > 254) {
             return false;
         }
 
@@ -149,7 +149,7 @@ class Utils
      *
      * @return bool True if the address is valid
      */
-    public static function checkIp($_address)
+    public static function checkIp(string $_address)
     {
         #return self::isIPv4($_address) || self::isIPv6($_address);
         return filter_var($_address, FILTER_VALIDATE_IP) !== false;
@@ -163,7 +163,7 @@ class Utils
      *
      * @return string|null
      */
-    public static function extractDomainFromEmail($address, $charset = self::CHARSET_ISO88591)
+    public static function extractDomainFromEmail(string $address, string $charset = self::CHARSET_ISO88591)
     {
         $address = trim($address);
         $pos = strrpos($address, '@');
@@ -310,5 +310,77 @@ class Utils
     public static function isIPv6($_address)
     {
         return filter_var($_address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
+    }
+
+
+    /**
+     * Wrapper for php's checkdnsrr function.
+     *
+     * @param string $host Fully-Qualified Domain Name
+     * @param string $type Resource record type to lookup
+     *                        Supported types are: MX (default), A, AAAA, NS, TXT, CNAME
+     *                        Other types may work or may not work
+     *
+     * @return mixed        true if entry found,
+     *                    false if entry not found,
+     *                    null if this function is not supported by this environment
+     *
+     * Since null can also be returned, you probably want to compare the result
+     * with === true or === false,
+     */
+    public static function checkDnsRecords($host, $type = 'MX')
+    {
+        // The dot indicates to search the DNS root (helps those having DNS prefixes on the same domain)
+        if (substr($host, -1) === '.') {
+            $host_fqdn = $host;
+            $host = substr($host, 0, -1);
+        } else {
+            $host_fqdn = $host . '.';
+        }
+        // $host		has format	some.host.example.com
+        // $host_fqdn	has format	some.host.example.com.
+
+        // If we're looking for an A record we can use gethostbyname()
+        if ($type == 'A' && function_exists('gethostbyname')) {
+            return (@gethostbyname($host_fqdn) != $host_fqdn);
+        }
+
+        if (function_exists('checkdnsrr')) {
+            return checkdnsrr($host_fqdn, $type);
+        }
+
+        if (function_exists('dns_get_record')) {
+            // dns_get_record() expects an integer as second parameter
+            // We have to convert the string $type to the corresponding integer constant.
+            $type_name = 'DNS_' . strtoupper($type);
+            $resource_type = defined($type_name) ? constant($type_name) : DNS_ANY;
+
+            // dns_get_record() might throw E_WARNING and return false for records that do not exist
+            $result_set = @dns_get_record($host_fqdn, $resource_type);
+
+            if (empty($result_set) || !is_array($result_set)) {
+                return false;
+            }
+
+            if ($resource_type === DNS_ANY) {
+                // $result_set is a non-empty array
+                return true;
+            }
+
+            foreach ($result_set as $result) {
+                if (
+                    isset($result['host'])
+                    && $result['host'] == $host
+                    && isset($result['type'])
+                    && $result['type'] == $type
+                ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return null;
     }
 }
