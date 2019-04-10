@@ -113,4 +113,62 @@ class DnsResolver
 
         return self::$dnsSupported;
     }
+
+
+    /**
+     * Check if IPv4 address is blacklisted
+     * This should be called only where absolutely necessary
+     *
+     * Only IPv4 (rbldns does not support AAAA records/IPv6 lookups)
+     *
+     * @param string $ip the IPv4 address to check
+     * @return bool|array FALSE if ip is not blacklisted, else an array([checked server], [lookup])
+     * @throws InvalidArgumentException
+     */
+    public function checkRblDns(string $ip)
+    {
+        if (!is_string($ip) || empty($ip)) {
+            throw new \InvalidArgumentException('IP must be a valid IPv4 address');
+        }
+
+        $quads = explode('.', $ip);
+        $reverse_ip = sprintf('%s.%s.%s.%s', $quads[3], $quads[2], $quads[1], $quads[0]);
+
+        $cacheKey = "rbl:$reverse_ip";
+        if ($this->cache->has($cacheKey)) {
+            return $this->cache->get($cacheKey);
+        }
+
+        // neither spamhaus nor spamcop supports IPv6 addresses
+        if (strpos($ip, ':') !== false) {
+            $this->cache->set($cacheKey, false);
+            return false;
+        }
+
+        $rbldns_servers = [
+            'sbl.spamhaus.org' => 'http://www.spamhaus.org/query/bl?ip=',
+            'bl.spamcop.net' => 'http://spamcop.net/bl.shtml?',
+        ];
+
+        // Need to be listed on all servers...
+        $listed = true;
+        $info = [];
+
+        foreach ($rbldns_servers as $server => $lookup) {
+            $host = sprintf('%s.%s.', $reverse_ip, $server);
+            if (Utils::checkDnsRecords($host, 'A') === true) {
+                $info = [$server, $lookup . $ip];
+            } else {
+                $listed = false;
+            }
+        }
+
+        if ($listed) {
+            $this->cache->set($cacheKey, $info);
+            return $info;
+        }
+
+        $this->cache->set($cacheKey, false);
+        return false;
+    }
 }
