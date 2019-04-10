@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * Class EmailAddressVerifier
  *
- * Provides means for bulk verification of e-mail addresses.
+ * Provides means for verification of e-mail addresses.
  *
  * There are several levels of verification: syntax check with by means of PHP filter_var(), DNS MX lookup of the
  * domain part of the address, test connection to the SMTP MX server responsible for delivering e-mail to
