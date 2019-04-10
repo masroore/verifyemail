@@ -57,9 +57,19 @@ final class Address
     /**
      * Retrieve domain
      *
+     * @return Domain
+     */
+    public function getDomain(): Domain
+    {
+        return $this->domain;
+    }
+
+    /**
+     * Retrieve ASCII domain
+     *
      * @return string
      */
-    public function getDomain(): string
+    public function canonizedDomain(): string
     {
         return $this->domain->toAscii()->getContent();
     }

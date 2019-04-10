@@ -20,11 +20,10 @@ final class AddressList implements Countable, Iterator
      * Add an address to the list
      *
      * @param string|Address $emailOrAddress
-     * @param null|string $name
      * @return AddressList
      * @throws InvalidArgumentException
      */
-    public function add($emailOrAddress, $name = null)
+    public function add($emailOrAddress): AddressList
     {
         if (is_string($emailOrAddress)) {
             $emailOrAddress = $this->createAddress($emailOrAddress);
@@ -59,7 +58,7 @@ final class AddressList implements Countable, Iterator
      * @return AddressList
      * @throws RuntimeException
      */
-    public function addMany(array $addresses)
+    public function addMany(array $addresses): AddressList
     {
         foreach ($addresses as $key => $value) {
             if (is_int($key) || is_numeric($key)) {
@@ -74,7 +73,7 @@ final class AddressList implements Countable, Iterator
                 ));
             }
 
-            $this->add($key, $value);
+            $this->add($key);
         }
         return $this;
     }
@@ -99,7 +98,7 @@ final class AddressList implements Countable, Iterator
      * @param string $email
      * @return bool
      */
-    public function has($email)
+    public function has(string $email): bool
     {
         $email = strtolower($email);
         return isset($this->addresses[$email]);
@@ -111,7 +110,7 @@ final class AddressList implements Countable, Iterator
      * @param string $email
      * @return bool|Address
      */
-    public function get($email)
+    public function get(string $email)
     {
         $email = strtolower($email);
         if (!isset($this->addresses[$email])) {
@@ -127,7 +126,7 @@ final class AddressList implements Countable, Iterator
      * @param string $email
      * @return bool
      */
-    public function delete($email)
+    public function delete(string $email): bool
     {
         $email = strtolower($email);
         if (!isset($this->addresses[$email])) {
@@ -143,7 +142,7 @@ final class AddressList implements Countable, Iterator
      *
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         return count($this->addresses);
     }
@@ -165,7 +164,7 @@ final class AddressList implements Countable, Iterator
      *
      * @return Address
      */
-    public function current()
+    public function current(): Address
     {
         return current($this->addresses);
     }
@@ -175,7 +174,7 @@ final class AddressList implements Countable, Iterator
      *
      * @return string
      */
-    public function key()
+    public function key(): string
     {
         return key($this->addresses);
     }
@@ -197,7 +196,7 @@ final class AddressList implements Countable, Iterator
      *
      * @return bool
      */
-    public function valid()
+    public function valid(): bool
     {
         $key = key($this->addresses);
         return ($key !== null && $key !== false);
@@ -209,7 +208,7 @@ final class AddressList implements Countable, Iterator
      * @param string $email
      * @return Address
      */
-    protected function createAddress($email)
+    protected function createAddress(string $email): Address
     {
         return new Address($email);
     }
