@@ -1,0 +1,28 @@
+{
+  "name": "masroore/verifyemail",
+  "description": "Provides means for verification of e-mail addresses.",
+  "homepage": "https://github.com/masroore/verifyemail",
+  "keywords": [
+    "php",
+    "email",
+    "verification",
+    "smtp",
+    "mx"
+  ],
+  "license": "BSD",
+  "require": {
+    "php": ">=7.0",
+    "psr/log": "^1.1"
+  },
+  "authors": [
+    {
+      "name": "Masroor Ehsan"
+    }
+  ],
+  "minimum-stability": "stable",
+  "autoload": {
+    "psr-4": {
+      "VerifyEmail\\": "src/"
+    }
+  }
+}
