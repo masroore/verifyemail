@@ -4,10 +4,10 @@ namespace VerifyEmail;
 
 use InvalidArgumentException;
 use Pdp\Domain;
-use Zend\Validator\EmailAddress;
+use Zend\Validator\EmailAddress as EmailAddressValidator;
 use Zend\Validator\Hostname;
 
-final class Address
+final class EmailAddress
 {
     /**
      * @var string
@@ -26,17 +26,13 @@ final class Address
     public function __construct(string $email)
     {
         $email = trim($email);
-        $emailAddressValidator = new EmailAddress(Hostname::ALLOW_DNS | Hostname::ALLOW_LOCAL | Hostname::ALLOW_IP);
         if (!is_string($email) || empty($email)) {
             throw new InvalidArgumentException('Email must be a valid email address');
         }
 
-        if (preg_match("/[\r\n]/", $email)) {
-            throw new InvalidArgumentException('CRLF injection detected');
-        }
-
-        if (!$emailAddressValidator->isValid($email)) {
-            $invalidMessages = $emailAddressValidator->getMessages();
+        $validator = new EmailAddressValidator(Hostname::ALLOW_DNS | Hostname::ALLOW_LOCAL | Hostname::ALLOW_IP);
+        if (!$validator->isValid($email)) {
+            $invalidMessages = $validator->getMessages();
             throw new InvalidArgumentException(array_shift($invalidMessages));
         }
 

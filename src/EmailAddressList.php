@@ -7,7 +7,7 @@ use InvalidArgumentException;
 use Iterator;
 use RuntimeException;
 
-final class AddressList implements Countable, Iterator
+final class EmailAddressList implements Countable, Iterator
 {
     /**
      * List of Address objects we're managing
@@ -19,17 +19,17 @@ final class AddressList implements Countable, Iterator
     /**
      * Add an address to the list
      *
-     * @param string|Address $emailOrAddress
-     * @return AddressList
+     * @param string|EmailAddress $emailOrAddress
+     * @return EmailAddressList
      * @throws InvalidArgumentException
      */
-    public function add($emailOrAddress): AddressList
+    public function add($emailOrAddress): EmailAddressList
     {
         if (is_string($emailOrAddress)) {
             $emailOrAddress = $this->createAddress($emailOrAddress);
         }
 
-        if (!$emailOrAddress instanceof Address) {
+        if (!$emailOrAddress instanceof EmailAddress) {
             throw new InvalidArgumentException(sprintf(
                 '%s expects an email address or %s\Address object as its first argument; received "%s"',
                 __METHOD__,
@@ -55,10 +55,10 @@ final class AddressList implements Countable, Iterator
      * and, as such, can be either email strings or Address\AddressInterface objects.
      *
      * @param array $addresses
-     * @return AddressList
+     * @return EmailAddressList
      * @throws RuntimeException
      */
-    public function addMany(array $addresses): AddressList
+    public function addMany(array $addresses): EmailAddressList
     {
         foreach ($addresses as $key => $value) {
             if (is_int($key) || is_numeric($key)) {
@@ -81,10 +81,10 @@ final class AddressList implements Countable, Iterator
     /**
      * Merge another address list into this one
      *
-     * @param AddressList $addressList
-     * @return AddressList
+     * @param EmailAddressList $addressList
+     * @return EmailAddressList
      */
-    public function merge(AddressList $addressList)
+    public function merge(EmailAddressList $addressList)
     {
         foreach ($addressList as $address) {
             $this->add($address);
@@ -108,7 +108,7 @@ final class AddressList implements Countable, Iterator
      * Get an address by email
      *
      * @param string $email
-     * @return bool|Address
+     * @return bool|EmailAddress
      */
     public function get(string $email)
     {
@@ -162,9 +162,9 @@ final class AddressList implements Countable, Iterator
     /**
      * Return current item in iteration
      *
-     * @return Address
+     * @return EmailAddress
      */
-    public function current(): Address
+    public function current(): EmailAddress
     {
         return current($this->addresses);
     }
@@ -206,10 +206,10 @@ final class AddressList implements Countable, Iterator
      * Create an address object
      *
      * @param string $email
-     * @return Address
+     * @return EmailAddress
      */
-    protected function createAddress(string $email): Address
+    protected function createAddress(string $email): EmailAddress
     {
-        return new Address($email);
+        return new EmailAddress($email);
     }
 }
