@@ -7,7 +7,7 @@ use InvalidArgumentException;
 use Iterator;
 use RuntimeException;
 
-final class EmailAddressList implements Countable, Iterator
+final class EmailAddressCollection implements Countable, Iterator
 {
     /**
      * List of Address objects we're managing
@@ -20,10 +20,10 @@ final class EmailAddressList implements Countable, Iterator
      * Add an address to the list
      *
      * @param string|EmailAddress $emailOrAddress
-     * @return EmailAddressList
+     * @return EmailAddressCollection
      * @throws InvalidArgumentException
      */
-    public function add($emailOrAddress): EmailAddressList
+    public function add($emailOrAddress): EmailAddressCollection
     {
         if (is_string($emailOrAddress)) {
             $emailOrAddress = $this->createAddress($emailOrAddress);
@@ -55,10 +55,10 @@ final class EmailAddressList implements Countable, Iterator
      * and, as such, can be either email strings or Address\AddressInterface objects.
      *
      * @param array $addresses
-     * @return EmailAddressList
+     * @return EmailAddressCollection
      * @throws RuntimeException
      */
-    public function addMany(array $addresses): EmailAddressList
+    public function addMany(array $addresses): EmailAddressCollection
     {
         foreach ($addresses as $key => $value) {
             if (is_int($key) || is_numeric($key)) {
@@ -81,10 +81,10 @@ final class EmailAddressList implements Countable, Iterator
     /**
      * Merge another address list into this one
      *
-     * @param EmailAddressList $addressList
-     * @return EmailAddressList
+     * @param EmailAddressCollection $addressList
+     * @return EmailAddressCollection
      */
-    public function merge(EmailAddressList $addressList)
+    public function merge(EmailAddressCollection $addressList)
     {
         foreach ($addressList as $address) {
             $this->add($address);
