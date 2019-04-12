@@ -212,4 +212,40 @@ final class EmailAddressCollection implements Countable, Iterator
     {
         return new EmailAddress($email);
     }
+
+    /**
+     * @return array
+     */
+    public function getDomains(): array
+    {
+        $domains = [];
+        foreach ($this->addresses as $email => $address) {
+            if (!in_array($address->canonizedDomain(), $domains, false)) {
+                $domains[] = $address->canonizedDomain();
+            }
+        }
+
+        return $domains;
+    }
+
+    /**
+     * Get a list of email addresses for the given domain.
+     *
+     * @param string $domain
+     * @return array
+     */
+    public function getEmailsInDomain(string $domain): array
+    {
+        // normalize IDNA domains if needed
+        $canonicalDomain = (new EmailAddress('dummy@' . trim($domain, ". \t\n\r\0\x0B")))->canonizedDomain();
+
+        $emails = [];
+        foreach ($this->addresses as $email => $address) {
+            if ((0 === strcasecmp($address->canonizedDomain(), $canonicalDomain))
+                && (!in_array($email, $emails, false))) {
+                $emails[] = $email;
+            }
+        }
+        return $emails;
+    }
 }
