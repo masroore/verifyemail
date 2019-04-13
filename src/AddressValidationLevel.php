@@ -23,14 +23,14 @@ final class AddressValidationLevel
      * Check e-mail address syntax only, via PHP filter_validate() function. Very fast and does not make any
      * network queries.
      */
-    const SyntaxCheck = 1;
+    public const SyntaxCheck = 1;
 
     /**
      * In addition to syntax check, do DNS MX query against the domain name part of the e-mail address to
      * determine which SMTP MX server is responsible for delivering e-mail to the given domain. Slower than
      * just syntax check but more accurate as invalid domains are filtered out.
      */
-    const DnsQuery = 2;
+    public const DnsQuery = 2;
 
     /**
      * In addition to the previous option, make an attempt to connect to the SMTP MX server determined at
@@ -38,25 +38,28 @@ final class AddressValidationLevel
      * is not responding, will also try other MXes of this domain, in accordance with their priorities.
      * Slower than just a DNS MX check but more accurate as it filters out the domains with dead SMTP MX servers.
      */
-    const SmtpConnection = 3;
+    public const SmtpConnection = 3;
 
     /**
      * This method not just connects to SMTP MX server but also submits the sender and recipient (where the
      * recipients is the e-mail address being examined) to that MX server. The slowest and the most
      * accurate method.
      */
-    const SendAttempt = 4;
+    public const SendAttempt = 4;
 
     /**
      * Verify() method returns this value when the e-mail address check passed successfully.
      * @see EmailAddressValidator::verify()
      */
-    const OK = 5;
+    public const OK = 5;
 
-    public static function check($value)
+    /**
+     * @param int $value
+     */
+    public static function boundsCheck(int $value): void
     {
         if ($value < self::SyntaxCheck || $value >= self::OK) {
-            throw new InvalidArgumentException('Invalid validation level');
+            throw new InvalidArgumentException(sprintf('Invalid validation level: %d', $value));
         }
     }
 
@@ -64,7 +67,7 @@ final class AddressValidationLevel
      * @param int $level
      * @return int
      */
-    public static function nextLevel($level)
+    public static function nextLevel(int $level): int
     {
         if (++$level > self::OK) {
             $level = self::OK;

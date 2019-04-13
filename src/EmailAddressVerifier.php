@@ -94,7 +94,7 @@ final class EmailAddressVerifier
      */
     public function setValidationLevel($validationLevel)
     {
-        AddressValidationLevel::check($validationLevel);
+        AddressValidationLevel::boundsCheck($validationLevel);
         $this->validationLevel = $validationLevel;
     }
 
