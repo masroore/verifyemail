@@ -4,8 +4,11 @@ namespace VerifyEmail;
 
 class Utils
 {
-    const CHARSET_ISO88591 = 'iso-8859-1';
-    const CHARSET_UTF8 = 'utf-8';
+    public const IPV4 = 4;
+    public const IPV6 = 6;
+
+    public const CHARSET_ISO88591 = 'iso-8859-1';
+    public const CHARSET_UTF8 = 'utf-8';
 
     private static $idnSupported;
     private static $dnsSupported;
@@ -382,5 +385,16 @@ class Utils
         }
 
         return null;
+    }
+
+    /**
+     * Gets the IP version. Does not perform IP address validation.
+     *
+     * @param string $ip the valid IPv4 or IPv6 address.
+     * @return int [[IPV4]] or [[IPV6]]
+     */
+    public static function getIpVersion($ip)
+    {
+        return strpos($ip, ':') === false ? self::IPV4 : self::IPV6;
     }
 }
