@@ -74,7 +74,8 @@ class DnsResolver
             return $this->cacheGet($cacheKey);
         }
 
-        if (checkdnsrr($domain, 'MX') === false) {
+        // check if MX records exist
+        if (FALSE === checkdnsrr($domain, 'MX')) {
             $this->cacheSet($domain, []);
             return [];
         }
@@ -150,7 +151,7 @@ class DnsResolver
 
         foreach ($rbldns_servers as $server => $lookup) {
             $host = sprintf('%s.%s.', $reverse_ip, $server);
-            if (Utils::checkDnsRecords($host, 'A') === true) {
+            if (TRUE === Utils::checkDnsRecords($host, 'A')) {
                 $info = [$server, $lookup . $ip];
             } else {
                 $listed = false;
