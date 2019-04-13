@@ -79,7 +79,7 @@ final class EmailAddressVerifier
      *
      * @see AddressValidationLevel
      */
-    public function getValidationLevel()
+    public function getValidationLevel(): int
     {
         return $this->validationLevel;
     }
@@ -92,7 +92,7 @@ final class EmailAddressVerifier
      *
      * @see AddressValidationLevel
      */
-    public function setValidationLevel($validationLevel)
+    public function setValidationLevel($validationLevel): void
     {
         AddressValidationLevel::boundsCheck($validationLevel);
         $this->validationLevel = $validationLevel;
@@ -108,7 +108,7 @@ final class EmailAddressVerifier
     /**
      * @return int
      */
-    public function getTimeout()
+    public function getTimeout(): int
     {
         return $this->timeout;
     }
@@ -116,11 +116,14 @@ final class EmailAddressVerifier
     /**
      * @param int $timeout
      */
-    public function setTimeout($timeout)
+    public function setTimeout(int $timeout): void
     {
         $this->timeout = $timeout;
     }
 
+    /**
+     * EmailAddressVerifier constructor.
+     */
     public function __construct()
     {
         // The default validation level is SendAttempt (maximum level of verification)
@@ -131,9 +134,9 @@ final class EmailAddressVerifier
     /**
      * Gets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
      *
-     * @return string
+     * @return string|null
      */
-    public function getHelloDomain()
+    public function getHelloDomain(): ?string
     {
         return $this->helloDomain;
     }
@@ -141,9 +144,9 @@ final class EmailAddressVerifier
     /**
      * Sets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
      *
-     * @param string $helloDomain
+     * @param string|null $helloDomain
      */
-    public function setHelloDomain($helloDomain)
+    public function setHelloDomain($helloDomain): void
     {
         if (is_string($helloDomain) && !empty($helloDomain)) {
             $this->helloDomain = $helloDomain;
@@ -153,9 +156,9 @@ final class EmailAddressVerifier
     /**
      * Gets the string to be used as sender when making test connections to SMTP servers.
      *
-     * @return string
+     * @return string|null
      */
-    public function getMailFrom()
+    public function getMailFrom(): ?string
     {
         return $this->mailFrom;
     }
@@ -163,7 +166,7 @@ final class EmailAddressVerifier
     /**
      * Sets the string to be used as sender when making test connections to SMTP servers.
      *
-     * @param string $mailFrom
+     * @param string|null $mailFrom
      */
     public function setMailFrom($mailFrom)
     {
@@ -177,7 +180,7 @@ final class EmailAddressVerifier
      *
      * @return bool TRUE if validation is complete.
      */
-    private function validationLevelComplete()
+    private function validationLevelComplete(): bool
     {
         $this->currentLevel = $this->validationLevel === $this->currentLevel
             ? AddressValidationLevel::OK
@@ -191,11 +194,10 @@ final class EmailAddressVerifier
      * @param string $email The e-mail email to check. Must be somewhat like "user@domain.tld".
      * @return int          AddressValidationLevel::OK if the validation succeeded, or the particular
      *                      validation level at which the verification failed.
-     *
      * @throws Exception
      * @see AddressValidationLevel
      */
-    public function verify($email)
+    public function verify(string $email): int
     {
         $this->currentLevel = AddressValidationLevel::SyntaxCheck;
 
@@ -234,7 +236,7 @@ final class EmailAddressVerifier
      * @param string $msg Debug string to output
      * @param int $level The debug level of this message.
      */
-    protected function log($msg, $level)
+    protected function log($msg, $level): void
     {
         if ($this->logger !== null) {
             $this->logger->log($msg, $level);
@@ -252,7 +254,7 @@ final class EmailAddressVerifier
     /**
      * @param DebugLogger $logger
      */
-    public function setLogger($logger)
+    public function setLogger($logger): void
     {
         $this->logger = $logger;
     }
@@ -277,7 +279,8 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    ) {
+    )
+    {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -294,7 +297,7 @@ final class EmailAddressVerifier
      * @return bool
      * @throws Exception
      */
-    private function verifyMxHost($mx_host, $domain, $email)
+    private function verifyMxHost(string $mx_host, string $domain, string $email): bool
     {
         $domain = $this->helloDomain ?? $domain;
         $mailFrom = $this->mailFrom ?? 'user@' . $domain;
