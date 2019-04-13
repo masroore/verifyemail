@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 
 namespace VerifyEmail;
 
@@ -48,7 +47,7 @@ final class AddressValidationLevel
     public const SendAttempt = 4;
 
     /**
-     * Verify() method returns this value when the e-mail address check passed successfully.
+     * This value is returned when the e-mail address check passed successfully.
      * @see EmailAddressValidator::verify()
      */
     public const OK = 5;
