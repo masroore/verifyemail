@@ -2,7 +2,6 @@
 
 namespace VerifyEmail;
 
-use InvalidArgumentException;
 use Pdp\Domain;
 
 final class Blacklist
@@ -22,36 +21,56 @@ final class Blacklist
      */
     public function banDomain($domain): void
     {
-        if ($domain instanceof Domain) {
-            $host = $domain->toAscii()->getContent();
-        } else {
-            if (!is_string($domain) || empty($domain)) {
-                throw new InvalidArgumentException('Domain must be a valid host name');
-            }
-            $host = $this->canonizeDomain($domain);
-        }
-
-        if (!in_array($host, $this->domains, true)) {
+        $host = $this->canonizeDomain($domain);
+        if (!$this->hasDomain($host)) {
             $this->domains[] = $host;
         }
     }
 
     /**
-     * @param string $email
-     * @return string
+     * @param array $items
      */
-    private function canonizeEmail(string $email): string
+    public function setBannedEmails(array $items): void
     {
-        return (new EmailAddress($email))->getEmail();
+        if (is_array($items)) {
+            $items = array_map(function ($x) {
+                return $this->canonizeEmail($x);
+            }, $items);
+            $this->emails = array_unique($items);
+        }
     }
 
     /**
-     * @param string $domain
+     * @param array $items
+     */
+    public function setBannedDomains(array $items): void
+    {
+        if (is_array($items)) {
+            $items = array_map(function ($x) {
+                return $this->canonizeDomain($x);
+            }, $items);
+            $this->domains = array_unique($items);
+        }
+    }
+
+    /**
+     * @param string|EmailAddress $addr
      * @return string
      */
-    private function canonizeDomain(string $domain): string
+    private function canonizeEmail($addr): string
     {
-        return (new Domain($domain))->toAscii()->getContent();
+        $email = ($addr instanceof EmailAddress) ? $addr : new EmailAddress($addr);
+        return mb_strtolower($email->getEmail());
+    }
+
+    /**
+     * @param string|Domain $addr
+     * @return string
+     */
+    private function canonizeDomain($addr): string
+    {
+        $domain = ($addr instanceof Domain) ? $addr : new Domain($addr);
+        return mb_strtolower($domain->toAscii()->getContent());
     }
 
     /**
@@ -59,41 +78,76 @@ final class Blacklist
      */
     public function banEmail($email): void
     {
-        if ($email instanceof EmailAddress) {
-            $address = $email->getEmail();
-        } else {
-            if (!is_string($email) || empty($email)) {
-                throw new InvalidArgumentException('Email must be a valid email address');
-            }
-            $address = $this->canonizeEmail($email);
-        }
-
-        if (!in_array($address, $this->emails, true)) {
+        $address = $this->canonizeEmail($email);
+        if (!$this->hasEmail($address)) {
             $this->emails[] = $address;
         }
     }
 
     /**
-     * Checks whether the supplied email is not blacklisted
+     * Checks whether the supplied email or the domain is not blacklisted
      *
-     * @param string $email
+     * @param string|EmailAddress $email
      * @return bool TRUE if email is not in blacklist
      */
-    public function emailAllowed(string $email): bool
+    public function emailAllowed($email): bool
     {
-        $email = $this->canonizeEmail($email);
-        return !in_array($email, $this->emails, true);
+        $addr = ($email instanceof EmailAddress) ? $email : new EmailAddress($email);
+        return $this->domainAllowed($addr->getDomain()) && !$this->emailBanned($addr);
     }
 
     /**
      * Checks whether the supplied domain name is not blacklisted
      *
-     * @param string $domain
+     * @param string|Domain $domain
      * @return bool TRUE if domain is not in blacklist
      */
-    public function domainAllowed(string $domain): bool
+    public function domainAllowed($domain): bool
     {
-        $domain = $this->canonizeDomain($domain);
-        return !in_array($domain, $this->domains, true);
+        return !$this->domainBanned($domain);
+    }
+
+    /**
+     * Checks if domain exists in the ban list
+     *
+     * @param string|Domain $addr
+     * @return bool
+     */
+    public function domainBanned($addr): bool
+    {
+        return $this->hasDomain($this->canonizeDomain($addr));
+    }
+
+    /**
+     * Checks if the email address exists in the ban list
+     *
+     * @param string|EmailAddress $addr
+     * @return bool
+     */
+    public function emailBanned($addr): bool
+    {
+        return $this->hasEmail($this->canonizeEmail($addr));
+    }
+
+    /**
+     * Checks if domain exists in the ban list
+     *
+     * @param string $addr
+     * @return bool
+     */
+    private function hasDomain(string $addr): bool
+    {
+        return in_array($addr, $this->domains, false);
+    }
+
+    /**
+     * Checks if the email address exists in the ban list
+     *
+     * @param string $addr
+     * @return bool
+     */
+    private function hasEmail(string $addr): bool
+    {
+        return in_array($addr, $this->emails, false);
     }
 }
