@@ -29,11 +29,6 @@ final class EmailAddressVerifier
     private $validationLevel;
 
     /**
-     * @var DebugLogger
-     */
-    private $logger;
-
-    /**
      * The domain string to use as an argument of HELO or EHLO commands when making test connections to SMTP servers.
      *
      * The EHLO/HELO argument which should be the public host name of the machine making connection to the SMTP server,
@@ -231,35 +226,6 @@ final class EmailAddressVerifier
     }
 
     /**
-     * Output debugging
-     *
-     * @param string $msg Debug string to output
-     * @param int $level The debug level of this message.
-     */
-    protected function log($msg, $level): void
-    {
-        if ($this->logger !== null) {
-            $this->logger->log($msg, $level);
-        }
-    }
-
-    /**
-     * @return DebugLogger
-     */
-    public function getLogger()
-    {
-        return $this->logger;
-    }
-
-    /**
-     * @param DebugLogger $logger
-     */
-    public function setLogger($logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    /**
      * Convenience method for email verification.
      *
      * @param string $email The email address to verify
@@ -279,8 +245,7 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    )
-    {
+    ) {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
