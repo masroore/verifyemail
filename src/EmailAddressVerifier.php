@@ -60,13 +60,6 @@ final class EmailAddressVerifier
     private $mailFrom;
 
     /**
-     * Current validation level
-     *
-     * @var int
-     */
-    private $currentLevel;
-
-    /**
      * @var array
      */
     private $mxTransferLogs = [];
@@ -201,19 +194,6 @@ final class EmailAddressVerifier
     /**
      * Checks if required level of verification has been achieved.
      *
-     * @return bool TRUE if validation is complete.
-     */
-    private function validationLevelComplete(): bool
-    {
-        $this->currentLevel = $this->validationLevel === $this->currentLevel
-            ? AddressValidationLevel::OK
-            : AddressValidationLevel::nextLevel($this->currentLevel);
-        return ($this->currentLevel === AddressValidationLevel::OK);
-    }
-
-    /**
-     * Checks if required level of verification has been achieved.
-     *
      * @param int $level
      * @return bool TRUE if validation is complete.
      */
@@ -236,24 +216,24 @@ final class EmailAddressVerifier
      */
     public function verify(string $email): int
     {
-        $this->currentLevel = AddressValidationLevel::SyntaxCheck;
+        $currentLevel = AddressValidationLevel::SyntaxCheck;
 
         if (!is_string($email) || empty($email)) {
             throw new InvalidArgumentException('Email must be a valid email address');
         }
 
         if (Utils::checkEmail($email, false)) {
-            if ($this->validationLevelComplete()) {
+            if ($this->checkValidationLevelCompletion($currentLevel)) {
                 return AddressValidationLevel::OK;
             }
 
             $domain = Utils::extractDomainFromEmail($email);
             $mxHosts = Utils::getMxHosts($domain);
             if (empty($mxHosts)) {
-                return $this->currentLevel;
+                return $currentLevel;
             }
 
-            if ($this->validationLevelComplete()) {
+            if ($this->checkValidationLevelCompletion($currentLevel)) {
                 return AddressValidationLevel::OK;
             }
 
@@ -264,7 +244,7 @@ final class EmailAddressVerifier
             }
         }
 
-        return $this->currentLevel;
+        return $currentLevel;
     }
 
     /**
@@ -335,7 +315,8 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    ) {
+    )
+    {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -422,8 +403,7 @@ final class EmailAddressVerifier
             return true;
         }
 
-        $success = ($smtp->hello($domain) && $smtp->mail($mailFrom));
-        if (!$success) {
+        if (!$smtp->hello($domain)) {
             self::setBulkResults($currentLevel, $emails, $result);
             $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
             $smtp->close();
@@ -432,10 +412,23 @@ final class EmailAddressVerifier
 
         if (count($emails) > $this->maxRecipientsPerConnection) {
             $partitions = array_chunk($emails, $this->maxRecipientsPerConnection);
+        } else {
+            $partitions = [$emails];
         }
 
-        foreach ($emails as $email) {
-            $result[$email] = $smtp->recipient($email) ? AddressValidationLevel::OK : $currentLevel;
+        foreach ($partitions as $emailsToCheck) {
+            if (!$smtp->mail($mailFrom)) {
+                self::setBulkResults($currentLevel, $emailsToCheck, $result);
+                $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+                $smtp->close();
+                return false;
+            }
+
+            foreach ($emailsToCheck as $email) {
+                $result[$email] = $smtp->recipient($email) ? AddressValidationLevel::OK : $currentLevel;
+            }
+
+            $smtp->reset();
         }
 
         $smtp->quit(true);
