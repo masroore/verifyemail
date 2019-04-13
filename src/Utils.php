@@ -341,7 +341,7 @@ class Utils
         // $host_fqdn	has format	some.host.example.com.
 
         // If we're looking for an A record we can use gethostbyname()
-        if ($type == 'A' && function_exists('gethostbyname')) {
+        if ($type === 'A' && function_exists('gethostbyname')) {
             return (@gethostbyname($host_fqdn) != $host_fqdn);
         }
 
