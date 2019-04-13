@@ -325,8 +325,7 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    )
-    {
+    ) {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
