@@ -4,11 +4,13 @@ namespace VerifyEmail;
 
 use InvalidArgumentException;
 use Pdp\Domain;
+use VerifyEmail\Traits\CanonizeDomain;
 use Zend\Validator\EmailAddress as EmailAddressValidator;
 use Zend\Validator\Hostname;
 
 final class EmailAddress
 {
+    use CanonizeDomain;
     /**
      * @var string
      */
@@ -67,7 +69,7 @@ final class EmailAddress
      */
     public function canonizedDomain(): string
     {
-        return $this->domain->toAscii()->getContent();
+        return self::canonizeDomain($this->domain);
     }
 
     private function setDomainFromEmail(string $email): void

@@ -3,9 +3,13 @@
 namespace VerifyEmail;
 
 use Pdp\Domain;
+use VerifyEmail\Traits\CanonizeDomain;
+use VerifyEmail\Traits\CanonizeEmail;
 
 final class Blacklist
 {
+    use CanonizeEmail, CanonizeDomain;
+
     /**
      * @var array
      */
@@ -21,7 +25,7 @@ final class Blacklist
      */
     public function banDomain($domain): void
     {
-        $host = $this->canonizeDomain($domain);
+        $host = self::canonizeDomain($domain);
         if (!$this->hasDomain($host)) {
             $this->domains[] = $host;
         }
@@ -33,8 +37,8 @@ final class Blacklist
     public function setBannedEmails(array $items): void
     {
         if (is_array($items)) {
-            $items = array_map(function ($x) {
-                return $this->canonizeEmail($x);
+            $items = array_map(static function ($x) {
+                return self::canonizeEmail($x);
             }, $items);
             $this->emails = array_unique($items);
         }
@@ -46,31 +50,11 @@ final class Blacklist
     public function setBannedDomains(array $items): void
     {
         if (is_array($items)) {
-            $items = array_map(function ($x) {
-                return $this->canonizeDomain($x);
+            $items = array_map(static function ($x) {
+                return self::canonizeDomain($x);
             }, $items);
             $this->domains = array_unique($items);
         }
-    }
-
-    /**
-     * @param string|EmailAddress $addr
-     * @return string
-     */
-    private function canonizeEmail($addr): string
-    {
-        $email = ($addr instanceof EmailAddress) ? $addr : new EmailAddress($addr);
-        return mb_strtolower($email->getEmail());
-    }
-
-    /**
-     * @param string|Domain $addr
-     * @return string
-     */
-    private function canonizeDomain($addr): string
-    {
-        $domain = ($addr instanceof Domain) ? $addr : new Domain($addr);
-        return mb_strtolower($domain->toAscii()->getContent());
     }
 
     /**
@@ -78,7 +62,7 @@ final class Blacklist
      */
     public function banEmail($email): void
     {
-        $address = $this->canonizeEmail($email);
+        $address = self::canonizeEmail($email);
         if (!$this->hasEmail($address)) {
             $this->emails[] = $address;
         }
@@ -115,7 +99,7 @@ final class Blacklist
      */
     public function domainBanned($addr): bool
     {
-        return $this->hasDomain($this->canonizeDomain($addr));
+        return $this->hasDomain(self::canonizeDomain($addr));
     }
 
     /**
@@ -126,7 +110,7 @@ final class Blacklist
      */
     public function emailBanned($addr): bool
     {
-        return $this->hasEmail($this->canonizeEmail($addr));
+        return $this->hasEmail(self::canonizeEmail($addr));
     }
 
     /**

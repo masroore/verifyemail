@@ -6,9 +6,12 @@ use Countable;
 use InvalidArgumentException;
 use Iterator;
 use RuntimeException;
+use VerifyEmail\Traits\CanonizeEmail;
 
 final class EmailAddressCollection implements Countable, Iterator
 {
+    use CanonizeEmail;
+
     /**
      * List of Address objects we're managing
      *
@@ -38,7 +41,7 @@ final class EmailAddressCollection implements Countable, Iterator
             ));
         }
 
-        $email = strtolower($emailOrAddress->getEmail());
+        $email = mb_strtolower($emailOrAddress->getEmail());
         if ($this->has($email)) {
             return $this;
         }
@@ -112,7 +115,7 @@ final class EmailAddressCollection implements Countable, Iterator
      */
     public function get(string $email)
     {
-        $email = strtolower($email);
+        $email = self::canonizeEmail($email);
         if (!isset($this->addresses[$email])) {
             return false;
         }
@@ -128,7 +131,7 @@ final class EmailAddressCollection implements Countable, Iterator
      */
     public function delete(string $email): bool
     {
-        $email = strtolower($email);
+        $email = self::canonizeEmail($email);
         if (!isset($this->addresses[$email])) {
             return false;
         }
