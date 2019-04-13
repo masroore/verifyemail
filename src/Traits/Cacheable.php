@@ -18,6 +18,8 @@ trait Cacheable
     }
 
     /**
+     * Fetches a value from the cache.
+     *
      * @param string $key
      * @param null $default
      * @return mixed
@@ -29,9 +31,11 @@ trait Cacheable
     }
 
     /**
+     * Persists data in the cache, uniquely referenced by a key with an optional expiration TTL time.
+     *
      * @param string $key
-     * @param $value
-     * @param null $ttl
+     * @param mixed $value
+     * @param null|int|\DateInterval $ttl
      * @return bool
      * @throws InvalidArgumentException
      */
@@ -41,6 +45,8 @@ trait Cacheable
     }
 
     /**
+     * Determines whether an item is present in the cache.
+     *
      * @param string $key
      * @return bool
      * @throws InvalidArgumentException
