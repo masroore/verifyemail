@@ -41,7 +41,7 @@ final class EmailAddressCollection implements Countable, Iterator
             ));
         }
 
-        $email = mb_strtolower($emailOrAddress->getEmail());
+        $email = self::canonizeEmail($emailOrAddress->getEmail());
         if ($this->has($email)) {
             return $this;
         }
@@ -103,7 +103,7 @@ final class EmailAddressCollection implements Countable, Iterator
      */
     public function has(string $email): bool
     {
-        $email = strtolower($email);
+        $email = self::canonizeEmail($email);
         return isset($this->addresses[$email]);
     }
 
