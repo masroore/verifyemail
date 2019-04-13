@@ -2,16 +2,14 @@
 
 namespace VerifyEmail;
 
-use Pdp\Domain;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
+use VerifyEmail\Traits\Cacheable;
+use VerifyEmail\Traits\CanonizeDomain;
 
 class DnsResolver
 {
-    /**
-     * @var CacheInterface
-     */
-    private $cache;
+    use CanonizeDomain, Cacheable;
 
     /**
      * @var bool
@@ -25,16 +23,16 @@ class DnsResolver
      */
     public function __construct(CacheInterface $cache)
     {
-        $this->cache = $cache;
+        $this->cacheInit($cache);
     }
 
     /**
      * @param string $domain
      * @return string
      */
-    public static function canonizeDomainName(string $domain): string
+    public static function canonizeFQDN(string $domain): string
     {
-        $domain = rtrim($domain, '.') . '.';
+        $domain = rtrim(self::canonizeDomain($domain), '.') . '.';
         return strtolower($domain);
     }
 
@@ -47,13 +45,9 @@ class DnsResolver
      */
     public function getMxHostsForEmail($email): array
     {
-        if (is_string($email)) {
-            $d = new Domain(Utils::extractDomainFromEmail($email));
-            $domain = $d->toAscii()->getContent();
-        } elseif ($email instanceof EmailAddress) {
-            $domain = $email->canonizedDomain();
-        }
-
+        $domain = ($email instanceof EmailAddress)
+            ? $email->canonizedDomain()
+            : self::canonizeDomain(Utils::extractDomainFromEmail($email));
         return $this->getMxHostsForDomain($domain);
     }
 
@@ -74,14 +68,14 @@ class DnsResolver
             return [];
         }
 
-        $domain = self::canonizeDomainName($domain);
+        $domain = self::canonizeFQDN($domain);
         $cacheKey = "domain:$domain";
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
+        if ($this->cacheHas($cacheKey)) {
+            return $this->cacheGet($cacheKey);
         }
 
         if (checkdnsrr($domain, 'MX') === false) {
-            $this->cache->set($domain, []);
+            $this->cacheSet($domain, []);
             return [];
         }
 
@@ -95,7 +89,7 @@ class DnsResolver
         asort($mx_records);
 
         $sorted_hosts = array_keys($mx_records);
-        $this->cache->set($cacheKey, $sorted_hosts);
+        $this->cacheSet($cacheKey, $sorted_hosts);
 
         return $sorted_hosts;
     }
@@ -135,13 +129,13 @@ class DnsResolver
         $reverse_ip = implode('.', array_reverse($quads));
 
         $cacheKey = "rbl:$reverse_ip";
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
+        if ($this->cacheHas($cacheKey)) {
+            return $this->cacheGet($cacheKey);
         }
 
         // neither spamhaus nor spamcop supports IPv6 addresses
         if (strpos($ip, ':') !== false) {
-            $this->cache->set($cacheKey, false);
+            $this->cacheSet($cacheKey, false);
             return false;
         }
 
@@ -164,11 +158,11 @@ class DnsResolver
         }
 
         if ($listed) {
-            $this->cache->set($cacheKey, $info);
+            $this->cacheSet($cacheKey, $info);
             return $info;
         }
 
-        $this->cache->set($cacheKey, false);
+        $this->cacheSet($cacheKey, false);
         return false;
     }
 }
