@@ -28,6 +28,8 @@ final class EmailAddressVerifier
      */
     private $validationLevel;
 
+    public const MAX_BULK = 16;
+
     /**
      * The domain string to use as an argument of HELO or EHLO commands when making test connections to SMTP servers.
      *
@@ -184,6 +186,20 @@ final class EmailAddressVerifier
     }
 
     /**
+     * Checks if required level of verification has been achieved.
+     *
+     * @param int $level
+     * @return bool TRUE if validation is complete.
+     */
+    private function checkValidationLevelCompletion(int &$level): bool
+    {
+        $level = $this->validationLevel === $level
+            ? AddressValidationLevel::OK
+            : AddressValidationLevel::nextLevel($level);
+        return ($level === AddressValidationLevel::OK);
+    }
+
+    /**
      * Verifies a single e-mail email for correct syntax and, optionally, checks it for existence.
      *
      * @param string $email The e-mail email to check. Must be somewhat like "user@domain.tld".
@@ -226,6 +242,47 @@ final class EmailAddressVerifier
     }
 
     /**
+     * @param array $emails
+     * @return array
+     */
+    public function verifyBulk(array $emails): array
+    {
+        $collection = new EmailAddressCollection();
+        $collection->addMany($emails);
+        $result = [];
+        foreach ($collection->getDomains() as $domain) {
+            $domainEmails = $collection->getEmailsInDomain($domain);
+
+            if (!empty($domainEmails)) {
+                $currentLevel = AddressValidationLevel::SyntaxCheck;
+                $validEmails = array_filter($domainEmails, static function ($x) {
+                    return Utils::checkEmail($x, false);
+                });
+
+                if ($this->checkValidationLevelCompletion($currentLevel)) {
+                    return self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
+                }
+
+                $mxHosts = Utils::getMxHosts($domain);
+                if (empty($mxHosts)) {
+                    return self::setBulkResults($currentLevel, $validEmails, $result);
+                }
+
+                if ($this->checkValidationLevelCompletion($currentLevel)) {
+                    return self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
+                }
+
+                foreach ($mxHosts as $host) {
+                    if ($this->verifyMxHostBulk($host, $domain, $currentLevel, $validEmails, $result)) {
+                        break;
+                    }
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Convenience method for email verification.
      *
      * @param string $email The email address to verify
@@ -245,7 +302,8 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    ) {
+    )
+    {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -286,5 +344,70 @@ final class EmailAddressVerifier
         $smtp->quit(true);
         $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
         return $success;
+    }
+
+    /**
+     * @param int $currentLevel
+     * @param array $emails
+     * @param array $result
+     * @return array
+     */
+    private static function setBulkResults(int $currentLevel, array $emails, array &$result): array
+    {
+        foreach ($emails as $email) {
+            $result[$email] = $currentLevel;
+        }
+        return $result;
+    }
+
+    /**
+     * @param string $mx_host
+     * @param string $domain
+     * @param int $currentLevel
+     * @param array $emails
+     * @param array $result
+     * @return bool
+     */
+    private function verifyMxHostBulk(string $mx_host, string $domain, int &$currentLevel, array $emails, array &$result): bool
+    {
+        $domain = $this->helloDomain ?? $domain;
+        $mailFrom = $this->mailFrom ?? 'user@' . $domain;
+
+        $smtp = new SmtpConnection();
+        $smtp->setDebugLevel(5);
+        $smtp->connect($mx_host, 25, $this->timeout);
+
+        if (!$smtp->connected()) {
+            self::setBulkResults($currentLevel, $emails, $result);
+            return false;
+        }
+
+        if ($this->checkValidationLevelCompletion($currentLevel)) {
+            // AddressValidationLevel::SmtpConnection completed
+            self::setBulkResults($currentLevel, $emails, $result);
+            $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+            $smtp->close();
+            return true;
+        }
+
+        $success = ($smtp->hello($domain) && $smtp->mail($mailFrom));
+        if (!$success) {
+            self::setBulkResults($currentLevel, $emails, $result);
+            $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+            $smtp->close();
+            return false;
+        }
+
+        if (count($emails) > self::MAX_BULK)
+            $partitions = array_chunk($emails, 16);
+
+
+        foreach ($emails as $email) {
+            $result[$email] = $smtp->recipient($email) ? AddressValidationLevel::OK : $currentLevel;
+        }
+
+        $smtp->quit(true);
+        $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+        return true;
     }
 }
