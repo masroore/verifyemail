@@ -62,7 +62,7 @@ final class EmailAddressVerifier
     /**
      * @var array
      */
-    private $mxTransferLogs = [];
+    private $smtpTransferLog = [];
 
     /**
      * Maximum number of recipients per SMTP connection
@@ -134,6 +134,14 @@ final class EmailAddressVerifier
     public function setTimeout(int $timeout): void
     {
         $this->timeout = $timeout;
+    }
+
+    /**
+     * @return array
+     */
+    public function getSmtpTransferLog(): array
+    {
+        return $this->smtpTransferLog;
     }
 
     /**
@@ -216,6 +224,7 @@ final class EmailAddressVerifier
      */
     public function verify(string $email): int
     {
+        $this->smtpTransferLog = [];
         $currentLevel = AddressValidationLevel::SyntaxCheck;
 
         if (!is_string($email) || empty($email)) {
@@ -256,6 +265,7 @@ final class EmailAddressVerifier
         $collection = new EmailAddressCollection();
         $collection->addMany($emailsToVerify);
         $result = [];
+        $this->smtpTransferLog = [];
 
         foreach ($collection->getDomains() as $domain) {
             $domainEmails = $collection->getEmailsInDomain($domain);
@@ -315,8 +325,7 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    )
-    {
+    ) {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -348,14 +357,14 @@ final class EmailAddressVerifier
 
         if ($this->validationLevelComplete()) {
             // AddressValidationLevel::SmtpConnection completed
-            $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+            $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
             $smtp->close();
             return true;
         }
 
         $success = ($smtp->hello($domain) && $smtp->mail($mailFrom) && $smtp->recipient($email));
         $smtp->quit(true);
-        $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+        $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
         return $success;
     }
 
@@ -398,14 +407,14 @@ final class EmailAddressVerifier
         if ($this->checkValidationLevelCompletion($currentLevel)) {
             // AddressValidationLevel::SmtpConnection completed
             self::setBulkResults($currentLevel, $emails, $result);
-            $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+            $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
             $smtp->close();
             return true;
         }
 
         if (!$smtp->hello($domain)) {
             self::setBulkResults($currentLevel, $emails, $result);
-            $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+            $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
             $smtp->close();
             return false;
         }
@@ -419,7 +428,7 @@ final class EmailAddressVerifier
         foreach ($partitions as $emailsToCheck) {
             if (!$smtp->mail($mailFrom)) {
                 self::setBulkResults($currentLevel, $emailsToCheck, $result);
-                $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+                $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
                 $smtp->close();
                 return false;
             }
@@ -432,7 +441,7 @@ final class EmailAddressVerifier
         }
 
         $smtp->quit(true);
-        $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
+        $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
         return true;
     }
 }
