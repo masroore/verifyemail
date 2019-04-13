@@ -28,7 +28,9 @@ final class EmailAddressVerifier
      */
     private $validationLevel;
 
-    public const MAX_BULK = 16;
+    public const MAX_RECIPIENTS_PER_CONNECTION = 50;
+
+    public const DEFAULT_TIMEOUT = 30;
 
     /**
      * The domain string to use as an argument of HELO or EHLO commands when making test connections to SMTP servers.
@@ -70,6 +72,20 @@ final class EmailAddressVerifier
     private $mxTransferLogs = [];
 
     /**
+     * Maximum number of recipients per SMTP connection
+     *
+     * @var int
+     */
+    private $maxRecipientsPerConnection;
+
+    /**
+     * The amount of time (in seconds) to wait for a response from the SMTP server.
+     *
+     * @var int
+     */
+    private $timeout;
+
+    /**
      * Gets the level of deepness of e-mail address verification.
      *
      * @return int
@@ -96,11 +112,20 @@ final class EmailAddressVerifier
     }
 
     /**
-     * The amount of time (in seconds) to wait for a response from the SMTP server.
-     *
-     * @var int
+     * @return int
      */
-    private $timeout;
+    public function getMaxRecipientsPerConnection(): int
+    {
+        return $this->maxRecipientsPerConnection;
+    }
+
+    /**
+     * @param int $value
+     */
+    public function setMaxRecipientsPerConnection(int $value): void
+    {
+        $this->maxRecipientsPerConnection = $value;
+    }
 
     /**
      * @return int
@@ -125,7 +150,8 @@ final class EmailAddressVerifier
     {
         // The default validation level is SendAttempt (maximum level of verification)
         $this->validationLevel = AddressValidationLevel::SendAttempt;
-        $this->timeout = 30;
+        $this->maxRecipientsPerConnection = self::MAX_RECIPIENTS_PER_CONNECTION;
+        $this->timeout = self::DEFAULT_TIMEOUT;
     }
 
     /**
@@ -242,43 +268,50 @@ final class EmailAddressVerifier
     }
 
     /**
-     * @param array $emails
+     * @param array $emailsToVerify
      * @return array
      */
-    public function verifyBulk(array $emails): array
+    public function verifyBulk(array $emailsToVerify): array
     {
         $collection = new EmailAddressCollection();
-        $collection->addMany($emails);
+        $collection->addMany($emailsToVerify);
         $result = [];
+
         foreach ($collection->getDomains() as $domain) {
             $domainEmails = $collection->getEmailsInDomain($domain);
 
-            if (!empty($domainEmails)) {
-                $currentLevel = AddressValidationLevel::SyntaxCheck;
-                $validEmails = array_filter($domainEmails, static function ($x) {
-                    return Utils::checkEmail($x, false);
-                });
+            if (empty($domainEmails)) {
+                continue;
+            }
 
-                if ($this->checkValidationLevelCompletion($currentLevel)) {
-                    return self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
-                }
+            $currentLevel = AddressValidationLevel::SyntaxCheck;
+            $validEmails = array_filter($domainEmails, static function ($x) {
+                return Utils::checkEmail($x, false);
+            });
 
-                $mxHosts = Utils::getMxHosts($domain);
-                if (empty($mxHosts)) {
-                    return self::setBulkResults($currentLevel, $validEmails, $result);
-                }
+            if ($this->checkValidationLevelCompletion($currentLevel)) {
+                self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
+                break;
+            }
 
-                if ($this->checkValidationLevelCompletion($currentLevel)) {
-                    return self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
-                }
+            $mxHosts = Utils::getMxHosts($domain);
+            if (empty($mxHosts)) {
+                self::setBulkResults($currentLevel, $validEmails, $result);
+                break;
+            }
 
-                foreach ($mxHosts as $host) {
-                    if ($this->verifyMxHostBulk($host, $domain, $currentLevel, $validEmails, $result)) {
-                        break;
-                    }
+            if ($this->checkValidationLevelCompletion($currentLevel)) {
+                self::setBulkResults(AddressValidationLevel::OK, $validEmails, $result);
+                break;
+            }
+
+            foreach ($mxHosts as $host) {
+                if ($this->verifyMxHostBulk($host, $domain, $currentLevel, $validEmails, $result)) {
+                    break;
                 }
             }
         }
+
         return $result;
     }
 
@@ -302,8 +335,7 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    )
-    {
+    ) {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -398,9 +430,9 @@ final class EmailAddressVerifier
             return false;
         }
 
-        if (count($emails) > self::MAX_BULK)
-            $partitions = array_chunk($emails, 16);
-
+        if (count($emails) > $this->maxRecipientsPerConnection) {
+            $partitions = array_chunk($emails, $this->maxRecipientsPerConnection);
+        }
 
         foreach ($emails as $email) {
             $result[$email] = $smtp->recipient($email) ? AddressValidationLevel::OK : $currentLevel;
