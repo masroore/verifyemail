@@ -247,7 +247,7 @@ final class EmailAddressVerifier
             }
 
             foreach ($mxHosts as $host) {
-                if ($this->verifyMxHost($host, $domain, $email)) {
+                if ($this->verifyMxHost($host, $domain, $currentLevel, $email)) {
                     return AddressValidationLevel::OK;
                 }
             }
@@ -325,7 +325,8 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    ) {
+    )
+    {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -338,11 +339,11 @@ final class EmailAddressVerifier
     /**
      * @param string $mx_host
      * @param string $domain
+     * @param int $currentLevel
      * @param string $email
      * @return bool
-     * @throws Exception
      */
-    private function verifyMxHost(string $mx_host, string $domain, string $email): bool
+    private function verifyMxHost(string $mx_host, string $domain, int &$currentLevel, string $email): bool
     {
         $domain = $this->helloDomain ?? $domain;
         $mailFrom = $this->mailFrom ?? 'user@' . $domain;
@@ -355,7 +356,7 @@ final class EmailAddressVerifier
             return false;
         }
 
-        if ($this->validationLevelComplete()) {
+        if ($this->checkValidationLevelCompletion($currentLevel)) {
             // AddressValidationLevel::SmtpConnection completed
             $this->smtpTransferLog[$mx_host] = $smtp->transferLogs;
             $smtp->close();
