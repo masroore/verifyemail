@@ -4,50 +4,11 @@ namespace VerifyEmail;
 
 class Utils
 {
-    const CHARSET_ISO88591 = 'iso-8859-1';
-    const CHARSET_UTF8 = 'utf-8';
+    public const CHARSET_ISO88591 = 'iso-8859-1';
+    public const CHARSET_UTF8     = 'utf-8';
 
     private static $idnSupported;
     private static $dnsSupported;
-
-    /**
-     * Tells whether IDNs (Internationalized Domain Names) are supported or not. This requires the
-     * `intl` and `mbstring` PHP extensions.
-     *
-     * @return bool `true` if required functions for IDN support are present
-     */
-    public static function idnSupported()
-    {
-        if (self::$idnSupported === null) {
-            self::$idnSupported = function_exists('idn_to_ascii') && function_exists('mb_convert_encoding');
-        }
-        return self::$idnSupported;
-    }
-
-    /**
-     * Tells whether DNS functions are supported or not.
-     *
-     * @return bool
-     */
-    public static function dnsSupported()
-    {
-        if (self::$dnsSupported === null) {
-            self::$dnsSupported = function_exists('checkdnsrr') && function_exists('getmxrr');
-        }
-        return self::$dnsSupported;
-    }
-
-    /**
-     * Does a string contain any 8-bit chars (in any charset)?
-     *
-     * @param string $text
-     *
-     * @return bool
-     */
-    public static function has8bitChars($text)
-    {
-        return (bool)preg_match('/[\x80-\xFF]/', $text);
-    }
 
     /**
      * E-mail address validation.
@@ -57,7 +18,7 @@ class Utils
      *
      * @return boolean True if email address is valid
      */
-    public static function checkEmail($email, $checkDns)
+    public static function checkEmail($email, $checkDns): bool
     {
         $email = trim($email);
 
@@ -81,7 +42,7 @@ class Utils
             return false;
         }
 
-        $localPart = substr($email, 0, $pos);
+        $localPart  = substr($email, 0, $pos);
         $domainPart = substr($email, $pos + 1);
 
         // validate local part
@@ -149,10 +110,23 @@ class Utils
      *
      * @return bool True if the address is valid
      */
-    public static function checkIp($_address)
+    public static function checkIp($_address): bool
     {
         #return self::isIPv4($_address) || self::isIPv6($_address);
         return filter_var($_address, FILTER_VALIDATE_IP) !== false;
+    }
+
+    /**
+     * Tells whether DNS functions are supported or not.
+     *
+     * @return bool
+     */
+    public static function dnsSupported(): bool
+    {
+        if (self::$dnsSupported === null) {
+            self::$dnsSupported = function_exists('checkdnsrr') && function_exists('getmxrr');
+        }
+        return self::$dnsSupported;
     }
 
     /**
@@ -163,10 +137,10 @@ class Utils
      *
      * @return string|null
      */
-    public static function extractDomainFromEmail($address, $charset = self::CHARSET_ISO88591)
+    public static function extractDomainFromEmail($address, $charset = self::CHARSET_ISO88591): ?string
     {
         $address = trim($address);
-        $pos = strrpos($address, '@');
+        $pos     = strrpos($address, '@');
 
         if (false !== $pos) {
             $domain = substr($address, ++$pos);
@@ -175,7 +149,7 @@ class Utils
                 && static::has8bitChars($domain)
                 && @mb_check_encoding($domain, $charset)) {
                 // verify charSet string is a valid one, and domain properly encoded in this charSet.
-                $domain = mb_convert_encoding($domain, 'UTF-8', $charset);
+                $domain   = mb_convert_encoding($domain, 'UTF-8', $charset);
                 $punycode = self::idnToAscii($domain);
                 if (!empty($punycode)) {
                     $domain = $punycode;
@@ -189,31 +163,29 @@ class Utils
     }
 
     /**
-     * Get MX hostnames for the given domain
+     * Tells whether IDNs (Internationalized Domain Names) are supported or not. This requires the
+     * `intl` and `mbstring` PHP extensions.
      *
-     * @param string $domain
-     * @return array
+     * @return bool `true` if required functions for IDN support are present
      */
-    public static function getMxHosts($domain)
+    public static function idnSupported(): bool
     {
-        if (!self::dnsSupported()) {
-            return [];
+        if (self::$idnSupported === null) {
+            self::$idnSupported = function_exists('idn_to_ascii') && function_exists('mb_convert_encoding');
         }
+        return self::$idnSupported;
+    }
 
-        if (checkdnsrr($domain, 'MX') === false) {
-            return [];
-        }
-
-        $mx_hosts = $mx_weights = [];
-        getmxrr($domain, $mx_hosts, $mx_weights);
-
-        // put the records together in an associative array we can sort
-        $mx_records = array_combine($mx_hosts, $mx_weights);
-
-        // sort them
-        asort($mx_records);
-
-        return array_keys($mx_records);
+    /**
+     * Does a string contain any 8-bit chars (in any charset)?
+     *
+     * @param string $text
+     *
+     * @return bool
+     */
+    public static function has8bitChars($text): bool
+    {
+        return (bool)preg_match('/[\x80-\xFF]/', $text);
     }
 
     /**
@@ -226,21 +198,9 @@ class Utils
      *
      * @return string Encoded e-mail address
      */
-    public static function idnToAscii($str)
+    public static function idnToAscii($str): string
     {
         return self::idnConvert($str, true);
-    }
-
-    /**
-     * Wrapper for idn_to_utf8 with support for e-mail address
-     *
-     * @param string $str Decoded e-mail address
-     *
-     * @return string Encoded e-mail address
-     */
-    public static function idnToUtf8($str)
-    {
-        return self::idnConvert($str, false);
     }
 
     /**
@@ -251,17 +211,17 @@ class Utils
      *
      * @return string Encoded e-mail address
      */
-    public static function idnConvert($email, $toAscii)
+    public static function idnConvert($email, $toAscii): string
     {
         if (!static::idnSupported()) {
             return $email;
         }
 
         if ($at = strrpos($email, '@')) {
-            $user = substr($email, 0, $at);
+            $user   = substr($email, 0, $at);
             $domain = substr($email, $at + 1);
         } else {
-            $user = '';
+            $user   = '';
             $domain = $email;
         }
 
@@ -289,13 +249,53 @@ class Utils
     }
 
     /**
+     * Get MX hostnames for the given domain
+     *
+     * @param string $domain
+     * @return array
+     */
+    public static function getMxHosts($domain): array
+    {
+        if (!self::dnsSupported()) {
+            return [];
+        }
+
+        if (checkdnsrr($domain, 'MX') === false) {
+            return [];
+        }
+
+        $mx_hosts = $mx_weights = [];
+        getmxrr($domain, $mx_hosts, $mx_weights);
+
+        // put the records together in an associative array we can sort
+        $mx_records = array_combine($mx_hosts, $mx_weights);
+
+        // sort them
+        asort($mx_records);
+
+        return array_keys($mx_records);
+    }
+
+    /**
+     * Wrapper for idn_to_utf8 with support for e-mail address
+     *
+     * @param string $str Decoded e-mail address
+     *
+     * @return string Encoded e-mail address
+     */
+    public static function idnToUtf8($str)
+    {
+        return self::idnConvert($str, false);
+    }
+
+    /**
      * returns true/false if the given address is a valid IPv4 address
      *
      * @param string $_address the IPv4 address to check
      *
      * @return boolean returns true/false if the address is IPv4 address
      */
-    public static function isIPv4($_address)
+    public static function isIPv4($_address): bool
     {
         return filter_var($_address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
     }
@@ -307,7 +307,7 @@ class Utils
      *
      * @return boolean returns true/false if the address is IPv6 address
      */
-    public static function isIPv6($_address)
+    public static function isIPv6($_address): bool
     {
         return filter_var($_address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
     }

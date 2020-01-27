@@ -72,33 +72,6 @@ final class EmailAddressVerifier
      * @var array
      */
     private $mxTransferLogs = [];
-
-    /**
-     * Gets the level of deepness of e-mail address verification.
-     *
-     * @return int
-     *
-     * @see AddressValidationLevel
-     */
-    public function getValidationLevel()
-    {
-        return $this->validationLevel;
-    }
-
-    /**
-     * Sets the level of deepness of e-mail address verification.
-     *
-     * @param int $validationLevel The value which tells EmailAddressValidator which checks to do in order to
-     *                              validate an e-mail address.
-     *
-     * @see AddressValidationLevel
-     */
-    public function setValidationLevel($validationLevel)
-    {
-        AddressValidationLevel::check($validationLevel);
-        $this->validationLevel = $validationLevel;
-    }
-
     /**
      * The amount of time (in seconds) to wait for a response from the SMTP server.
      *
@@ -106,156 +79,11 @@ final class EmailAddressVerifier
      */
     private $timeout;
 
-    /**
-     * @return int
-     */
-    public function getTimeout()
-    {
-        return $this->timeout;
-    }
-
-    /**
-     * @param int $timeout
-     */
-    public function setTimeout($timeout)
-    {
-        $this->timeout = $timeout;
-    }
-
     public function __construct()
     {
         // The default validation level is SendAttempt (maximum level of verification)
         $this->validationLevel = AddressValidationLevel::SendAttempt;
-        $this->timeout = 30;
-    }
-
-    /**
-     * Gets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
-     *
-     * @return string
-     */
-    public function getHelloDomain()
-    {
-        return $this->helloDomain;
-    }
-
-    /**
-     * Sets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
-     *
-     * @param string $helloDomain
-     */
-    public function setHelloDomain($helloDomain)
-    {
-        if (!empty($helloDomain)) {
-            $this->helloDomain = $helloDomain;
-        }
-    }
-
-    /**
-     * Gets the string to be used as sender when making test connections to SMTP servers.
-     *
-     * @return string
-     */
-    public function getMailFrom()
-    {
-        return $this->mailFrom;
-    }
-
-    /**
-     * Sets the string to be used as sender when making test connections to SMTP servers.
-     *
-     * @param string $mailFrom
-     */
-    public function setMailFrom($mailFrom)
-    {
-        if (!empty($mailFrom)) {
-            $this->mailFrom = $mailFrom;
-        }
-    }
-
-    /**
-     * Checks if required level of verification has been achieved.
-     *
-     * @return bool TRUE if validation is complete.
-     */
-    private function validationLevelComplete()
-    {
-        $this->currentLevel = $this->validationLevel === $this->currentLevel
-            ? AddressValidationLevel::OK
-            : AddressValidationLevel::nextLevel($this->currentLevel);
-        return ($this->currentLevel === AddressValidationLevel::OK);
-    }
-
-    /**
-     * Verifies a single e-mail email for correct syntax and, optionally, checks it for existence.
-     *
-     * @param string $email The e-mail email to check. Must be somewhat like "user@domain.tld".
-     * @return int          AddressValidationLevel::OK if the validation succeeded, or the particular
-     *                      validation level at which the verification failed.
-     *
-     * @throws Exception
-     * @see AddressValidationLevel
-     */
-    public function verify($email)
-    {
-        $this->currentLevel = AddressValidationLevel::SyntaxCheck;
-
-        if (empty($email)) {
-            throw new InvalidArgumentException('email cannot be empty');
-        }
-
-        if (Utils::checkEmail($email, false)) {
-            if ($this->validationLevelComplete()) {
-                return AddressValidationLevel::OK;
-            }
-
-            $domain = Utils::extractDomainFromEmail($email);
-            $mxHosts = Utils::getMxHosts($domain);
-            if (empty($mxHosts)) {
-                return $this->currentLevel;
-            }
-
-            if ($this->validationLevelComplete()) {
-                return AddressValidationLevel::OK;
-            }
-
-            foreach ($mxHosts as $host) {
-                if ($this->verifyMxHost($host, $domain, $email)) {
-                    return AddressValidationLevel::OK;
-                }
-            }
-        }
-
-        return $this->currentLevel;
-    }
-
-    /**
-     * Output debugging
-     *
-     * @param string $msg Debug string to output
-     * @param int $level The debug level of this message.
-     */
-    protected function log($msg, $level)
-    {
-        if ($this->logger !== null) {
-            $this->logger->log($msg, $level);
-        }
-    }
-
-    /**
-     * @return DebugLogger
-     */
-    public function getLogger()
-    {
-        return $this->logger;
-    }
-
-    /**
-     * @param DebugLogger $logger
-     */
-    public function setLogger($logger)
-    {
-        $this->logger = $logger;
+        $this->timeout         = 30;
     }
 
     /**
@@ -278,7 +106,7 @@ final class EmailAddressVerifier
         $mailFrom = null,
         $helloDomain = null,
         $timeout = 30
-    ) {
+    ): bool {
         $verifier = new self();
         $verifier->setMailFrom($mailFrom);
         $verifier->setHelloDomain($helloDomain);
@@ -289,15 +117,71 @@ final class EmailAddressVerifier
     }
 
     /**
+     * Verifies a single e-mail email for correct syntax and, optionally, checks it for existence.
+     *
+     * @param string $email The e-mail email to check. Must be somewhat like "user@domain.tld".
+     * @return int          AddressValidationLevel::OK if the validation succeeded, or the particular
+     *                      validation level at which the verification failed.
+     *
+     * @throws Exception
+     * @see AddressValidationLevel
+     */
+    public function verify($email): int
+    {
+        $this->currentLevel = AddressValidationLevel::SyntaxCheck;
+
+        if (empty($email)) {
+            throw new InvalidArgumentException('email cannot be empty');
+        }
+
+        if (Utils::checkEmail($email, false)) {
+            if ($this->validationLevelComplete()) {
+                return AddressValidationLevel::OK;
+            }
+
+            $domain  = Utils::extractDomainFromEmail($email);
+            $mxHosts = Utils::getMxHosts($domain);
+            if (empty($mxHosts)) {
+                return $this->currentLevel;
+            }
+
+            if ($this->validationLevelComplete()) {
+                return AddressValidationLevel::OK;
+            }
+
+            foreach ($mxHosts as $host) {
+                if ($this->verifyMxHost($host, $domain, $email)) {
+                    return AddressValidationLevel::OK;
+                }
+            }
+        }
+
+        return $this->currentLevel;
+    }
+
+    /**
+     * Checks if required level of verification has been achieved.
+     *
+     * @return bool TRUE if validation is complete.
+     */
+    private function validationLevelComplete(): bool
+    {
+        $this->currentLevel = $this->validationLevel === $this->currentLevel
+            ? AddressValidationLevel::OK
+            : AddressValidationLevel::nextLevel($this->currentLevel);
+        return ($this->currentLevel === AddressValidationLevel::OK);
+    }
+
+    /**
      * @param string $mx_host
      * @param string $domain
      * @param string $email
      * @return bool
      * @throws Exception
      */
-    private function verifyMxHost($mx_host, $domain, $email)
+    private function verifyMxHost($mx_host, $domain, $email): bool
     {
-        $domain = $this->helloDomain ?? $domain;
+        $domain   = $this->helloDomain ?? $domain;
         $mailFrom = $this->mailFrom ?? 'user@' . $domain;
 
         $smtp = new SmtpConnection();
@@ -319,5 +203,120 @@ final class EmailAddressVerifier
         $smtp->quit(true);
         $this->mxTransferLogs[$mx_host] = $smtp->transferLogs;
         return $success;
+    }
+
+    /**
+     * Gets the level of deepness of e-mail address verification.
+     *
+     * @return int
+     *
+     * @see AddressValidationLevel
+     */
+    public function getValidationLevel(): int
+    {
+        return $this->validationLevel;
+    }
+
+    /**
+     * Sets the level of deepness of e-mail address verification.
+     *
+     * @param int $validationLevel The value which tells EmailAddressValidator which checks to do in order to
+     *                              validate an e-mail address.
+     *
+     * @see AddressValidationLevel
+     */
+    public function setValidationLevel($validationLevel): void
+    {
+        AddressValidationLevel::check($validationLevel);
+        $this->validationLevel = $validationLevel;
+    }
+
+    /**
+     * @return int
+     */
+    public function getTimeout(): int
+    {
+        return $this->timeout;
+    }
+
+    /**
+     * @param int $timeout
+     */
+    public function setTimeout($timeout): void
+    {
+        $this->timeout = $timeout;
+    }
+
+    /**
+     * Gets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
+     *
+     * @return string
+     */
+    public function getHelloDomain(): string
+    {
+        return $this->helloDomain;
+    }
+
+    /**
+     * Sets the domain string to use as an argument of HELO/EHLO command when making test connections to SMTP servers
+     *
+     * @param string $helloDomain
+     */
+    public function setHelloDomain($helloDomain): void
+    {
+        if (!empty($helloDomain)) {
+            $this->helloDomain = $helloDomain;
+        }
+    }
+
+    /**
+     * Gets the string to be used as sender when making test connections to SMTP servers.
+     *
+     * @return string
+     */
+    public function getMailFrom(): string
+    {
+        return $this->mailFrom;
+    }
+
+    /**
+     * Sets the string to be used as sender when making test connections to SMTP servers.
+     *
+     * @param string $mailFrom
+     */
+    public function setMailFrom($mailFrom): void
+    {
+        if (!empty($mailFrom)) {
+            $this->mailFrom = $mailFrom;
+        }
+    }
+
+    /**
+     * @return DebugLogger
+     */
+    public function getLogger(): DebugLogger
+    {
+        return $this->logger;
+    }
+
+    /**
+     * @param DebugLogger $logger
+     */
+    public function setLogger($logger): void
+    {
+        $this->logger = $logger;
+    }
+
+    /**
+     * Output debugging
+     *
+     * @param string $msg Debug string to output
+     * @param int $level The debug level of this message.
+     */
+    protected function log($msg, $level): void
+    {
+        if ($this->logger !== null) {
+            $this->logger->log($msg, $level);
+        }
     }
 }
